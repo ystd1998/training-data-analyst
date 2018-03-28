@@ -20,8 +20,8 @@ def my_grep(line, term):
    if re.match( r'^' + re.escape(term), line):
       yield line
 
-PROJECT='cloud-training-demos'
-BUCKET='cloud-training-demos'
+PROJECT='gcp-ml-197405'
+BUCKET='gcp-ml-197405'
 
 def run():
    argv = [
