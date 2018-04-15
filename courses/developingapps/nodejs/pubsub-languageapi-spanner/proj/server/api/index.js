@@ -20,7 +20,7 @@ const model = require('../gcp/datastore');
 
 // TODO: Load the ../gcp/pubsub module
 
-
+const publisher = require('../gcp/pubsub');
 
 // END TODO
 
@@ -53,26 +53,25 @@ router.get('/:quiz', (req, res, next) => {
 router.post('/feedback/:quiz', (req, res, next) => {
   const feedback = req.body; // in the form [{id, answer}]
   console.log(feedback);
-  res.json('Feedback received!'); // move this
+  // res.json('Feedback received!'); // move this
 
   // TODO: Publish the message into Cloud Pub/Sub
-
+  publisher.publishFeedback(feedback).then(() => {
 
   // TODO: Move the statement that returns a message to 
   // the client app here
-
-
+  res.json('Feedback received');
 
   // END TODO
 
   // TODO: Add a catch
+  }).catch(err => {
 
   // TODO: There was an error, invoke the next middleware
-
-
+    next(err);
 
   // END TODO
-
+  });
 
   // END TODO
 

@@ -14,8 +14,7 @@ const config = require('../config');
 
 // TODO: Load the Natural Language ML API module
 
-
-
+const Language = require('@google-cloud/language');
 
 // END TODO
 
@@ -27,9 +26,9 @@ const config = require('../config');
 // This module retrieves the project ID from the 
 // GCLOUD_PROJECT environment variable.
 
-
-
-
+const language = Language({
+    projectID: config.get('GCLOUD_PROJECT')
+});
 
 // END TODO
 
@@ -38,27 +37,28 @@ function analyze(text) {
     // TODO: Create an object named document with the 
     // correct structure for the Natural Language ML API
 
+    const document = {
 
     // TODO: Initialize object content and type props
-    // TODO: Set content from text arg
-    // TODO: Set type to PLAIN_TEXT
-
+      content: text,     // TODO: Set content from text arg
+      type: 'PLAIN_TEXT' // TODO: Set type to PLAIN_TEXT
+    };
 
     // END TODO
 
     // TODO: Perform sentiment detection
-
-    // TODO: Chain then
+    return language.analyzeSentiment({ document })
+    
+      .then(results => { // TODO: Chain then
     // When the results come back
     // The sentiment data is the first element
-
+      const sentiment = results[0];
 
     // TODO: Get the sentiment score (-1 to +1)
-
-
+      return sentiment.documentSentiment.score;
 
     // END TODO
-
+   });
 }
 
 module.exports = {

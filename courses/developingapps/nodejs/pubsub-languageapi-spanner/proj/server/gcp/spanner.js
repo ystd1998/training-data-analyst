@@ -14,7 +14,7 @@ const config = require('../config');
 
 // TODO: Import the @google-cloud/spanner module
 
-
+const Spanner = require('@google-cloud/spanner');
 
 // END TODO
 
@@ -27,27 +27,27 @@ const config = require('../config');
 // This module retrieves the project ID from the 
 // GCLOUD_PROJECT environment variable.
 
-
-
-
+const spanner = Spanner({
+    projectId: config.get('GCLOUD_PROJECT')
+});
 
 // END TODO
 
 // TODO: Get a reference to the Cloud Spanner instance
 
-
+const instance = spanner.instance('quiz-instance');
 
 // END TODO
 
 // TODO: Get a reference to the Cloud Spanner database
 
-
+const database = instance.database('quiz-database');
 
 // END TODO
 
 // TODO: Get a reference to the Cloud Spanner table
 
-
+const table = database.table('feedback');
 
 
 // END TODO
@@ -59,13 +59,25 @@ function saveFeedback({ email, quiz, timestamp, rating, feedback, score }) {
     // TODO: Produce a 'reversed' email address
     // eg app.dev.student@example.org -> org_example_student_dev_app
 
-
+  const rev_email = email
+                     .replace(/[@\.]/g, '_')
+                     .split('_')
+                     .reverse()
+                     .join('_');
 
     // END TODO
 
     // TODO: Create record object to be inserted into Spanner
 
-
+  const record = {
+        feedbackId:  `${rev_email}_${quiz}_${timestamp}`,
+        email,
+        quiz,
+        timestamp,
+        rating,
+        score: spanner.float(score),
+        feedback,      
+  };
 
 
 
@@ -73,7 +85,7 @@ function saveFeedback({ email, quiz, timestamp, rating, feedback, score }) {
 
     // TODO: Insert the record into the table
 
-
+    return table.insert(record);
 
 
     // END TODO

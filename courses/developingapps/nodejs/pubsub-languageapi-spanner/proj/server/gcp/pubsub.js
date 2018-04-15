@@ -14,7 +14,7 @@ const config = require('../config');
 
 // TODO: Load the Cloud Pub/Sub module
 
-
+const Pubsub = require('@google-cloud/pubsub');
 
 // END TODO
 
@@ -27,8 +27,9 @@ const config = require('../config');
 // This module retrieves the project ID from the 
 // GCLOUD_PROJECT environment variable.
 
-
-
+const pubsub = Pubsub({
+  projectId: config.get('GCLOUD_PROJECT')
+});
 
 // END TODO
 
@@ -38,7 +39,7 @@ const config = require('../config');
 // If it isn't then you would need to handle that case by 
 // using the pubsub object's createTopic(...) method
 
-
+const topic = pubsub.topic('feedback');
 
 // END TODO
 
@@ -51,9 +52,9 @@ function publishFeedback(feedback) {
   // property for the message body. This lab will use the 
   // name data for the message data
 
-
-
-
+    return topic.publish({
+      data: feedback
+    });
 
   // END TODO
 
@@ -66,37 +67,37 @@ function registerFeedbackNotification(cb) {
   // TODO: Create a subscription called worker-subscription
   // TODO: Have it auto-acknowledge messages
 
-
+  topic.subscribe('worker-subscription', { autoAck: true })
+    .then(results => {
 
   // The results argument in the callback is an array - the 
   // first element in this array is the subscription object.
 
   // TODO: Declare a subscription constant
 
-
+  const subscription = results[0];
 
   // END TODO
 
   // TODO: Register an event handler for message event
   // TODO: Use an arrow function to handle the event
-
+  subscription.on('message', message => {
 
   // TODO: When a message arrives, invoke a callback
-
-
-
+    cb(message.data);
 
   // END TODO
-
+  });
 
   // TODO: Register an event handler for error event
-
+  subscription.on('error', err => {
 
   // TODO: Print the error to the console
+    console.error(err);
 
+  });
 
-
-
+  });
 
 }
 
