@@ -34,8 +34,8 @@ nconf
   .defaults({
 
     // This is the id of your project in the Google Cloud Developers Console.
-    GCLOUD_PROJECT: '',
-    GCLOUD_BUCKET: '',
+    GCLOUD_PROJECT: 'qwiklabs-gcp-37d83fe842041526',
+    GCLOUD_BUCKET: 'qwiklabs-gcp-37d83fe842041526-media',
 
     PORT: 8080
   });
