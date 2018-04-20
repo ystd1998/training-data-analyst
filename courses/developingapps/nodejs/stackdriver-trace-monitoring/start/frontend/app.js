@@ -16,7 +16,7 @@
 // Trace must be started before any other code in the 
 // application.
 
-
+require('@google-cloud/trace-agent').start();
 
 
 // END TODO
