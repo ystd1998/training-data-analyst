@@ -35,8 +35,8 @@ INPUT_COLUMNS = [
     tf.feature_column.categorical_column_with_identity('hourofday', num_buckets = 24),
 
     # Numeric columns
-    tf.feature_column.numeric_column('pickuplon'),
     tf.feature_column.numeric_column('pickuplat'),
+    tf.feature_column.numeric_column('pickuplon'),
     tf.feature_column.numeric_column('dropofflat'),
     tf.feature_column.numeric_column('dropofflon'),
     tf.feature_column.numeric_column('passengers'),
@@ -56,7 +56,7 @@ def build_estimator(model_dir, nbuckets, hidden_units):
   """
 
     # Input columns
-    (dayofweek, hourofday, latdiff, londiff, euclidean, plon, plat, dlon, dlat, pcount) = INPUT_COLUMNS
+    (dayofweek, hourofday, plat, plon, dlat, dlon, pcount, latdiff, londiff, euclidean) = INPUT_COLUMNS
 
     # Bucketize the lats & lons
     latbuckets = np.linspace(38.0, 42.0, nbuckets).tolist()
@@ -95,11 +95,19 @@ def build_estimator(model_dir, nbuckets, hidden_units):
         latdiff, londiff, euclidean
     ]
     
-    return tf.estimator.DNNLinearCombinedRegressor(
+    ## setting the checkpoint interval to be much lower for this task
+    run_config = tf.estimator.RunConfig(save_checkpoints_secs = 30, 
+                                        keep_checkpoint_max = 3)
+    estimator = tf.estimator.DNNLinearCombinedRegressor(
         model_dir = model_dir,
         linear_feature_columns = wide_columns,
         dnn_feature_columns = deep_columns,
-        dnn_hidden_units = hidden_units)
+        dnn_hidden_units = hidden_units,
+        config = run_config)
+
+    # add extra evaluation metric for hyperparameter tuning
+    estimator = tf.contrib.estimator.add_metrics(estimator, add_eval_metrics)
+    return estimator
 
 # Create feature engineering function that will be used in the input and serving input functions
 def add_engineered(features):
@@ -122,16 +130,13 @@ def add_engineered(features):
 def serving_input_fn():
     feature_placeholders = {
         # All the real-valued columns
-        column.name: tf.placeholder(tf.float32, [None]) for column in INPUT_COLUMNS[2:]
+        column.name: tf.placeholder(tf.float32, [None]) for column in INPUT_COLUMNS[2:7]
     }
     feature_placeholders['dayofweek'] = tf.placeholder(tf.string, [None])
     feature_placeholders['hourofday'] = tf.placeholder(tf.int32, [None])
 
-    features = {
-        key: tf.expand_dims(tensor, -1)
-        for key, tensor in feature_placeholders.items()
-    }
-    return tf.estimator.export.ServingInputReceiver(add_engineered(features), feature_placeholders)
+    features = add_engineered(feature_placeholders.copy())
+    return tf.estimator.export.ServingInputReceiver(features, feature_placeholders)
 
 # Create input function to load data into datasets
 def read_dataset(filename, mode, batch_size = 512):
@@ -174,7 +179,7 @@ def train_and_evaluate(args):
             filename = args['eval_data_paths'],
             mode = tf.estimator.ModeKeys.EVAL,
             batch_size = args['eval_batch_size']),
-        steps = None,
+        steps = 100,
         exporters = exporter)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
@@ -213,8 +218,9 @@ def generate_tfrecord_input_fn(data_paths, num_epochs = None, batch_size = 512, 
     # Return a function to input the features into the model from a data path.
     return get_input_features
 
-def get_eval_metrics():
+def add_eval_metrics(labels, predictions):
+    pred_values = predictions['predictions']
     return {
-        'rmse': tflearn.MetricSpec(metric_fn=metrics.streaming_root_mean_squared_error),
-        'training/hptuning/metric': tflearn.MetricSpec(metric_fn=metrics.streaming_root_mean_squared_error),
+        'rmse': tf.metrics.root_mean_squared_error(labels, pred_values)
     }
+

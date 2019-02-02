@@ -1,6 +1,8 @@
+#[START load_dependencies]
 import setuptools
 
 requirements = []
+
 setuptools.setup(
     name='TF-DATAFLOW-DEMO',
     version='v1',
@@ -11,3 +13,4 @@ setuptools.setup(
                             'trained/v1/variables/*']
                   },
 )
+#[END load_dependencies]

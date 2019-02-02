@@ -20,7 +20,7 @@ import argparse
 import json
 import os
 
-import model
+from . import model
 
 import shutil
 import tensorflow as tf
@@ -47,6 +47,11 @@ if __name__ == '__main__':
         '--job-dir',
         help = 'this model ignores this field, but it is required by gcloud',
         default = 'junk'
+    )
+    parser.add_argument(
+        '--keras',
+        help = 'Use the Keras variant',
+        action = 'store_true'
     )
 
     # Eval arguments
@@ -84,6 +89,6 @@ if __name__ == '__main__':
     # Run the training job
     try:
         shutil.rmtree(output_dir, ignore_errors = True) # start fresh each time
-        model.train_and_evaluate(output_dir)
+        model.train_and_evaluate(output_dir, arguments['keras'])
     except:
         traceback.print_exc()

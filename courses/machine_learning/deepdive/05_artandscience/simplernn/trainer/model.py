@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2017 Google Inc. All Rights Reserved.
 #
@@ -21,15 +21,17 @@ import tensorflow.contrib.rnn as rnn
 tf.logging.set_verbosity(tf.logging.INFO)
 
 SEQ_LEN = 10
-DEFAULTS = [[0.0] for x in xrange(0, SEQ_LEN)]
+DEFAULTS = [[0.0] for x in range(0, SEQ_LEN)]
 BATCH_SIZE = 20
-TIMESERIES_COL = 'rawdata'
+TIMESERIES_INPUT_LAYER = 'rawdata'
+TIMESERIES_COL = '{}_input'.format(TIMESERIES_INPUT_LAYER)
 # In each sequence, column index 0 to N_INPUTS - 1 are features, and column index N_INPUTS to SEQ_LEN are labels
 N_OUTPUTS = 1
 N_INPUTS = SEQ_LEN - N_OUTPUTS
+LSTM_SIZE = 3  # number of hidden layers in each of the LSTM cells
 
 # Read data and convert to needed format
-def read_dataset(filename, mode, batch_size = 512):
+def read_dataset(filename, mode, batch_size):
     def _input_fn():
         # Provide the ability to decode a CSV
         def decode_csv(line):
@@ -66,7 +68,18 @@ def read_dataset(filename, mode, batch_size = 512):
         return batch_features, batch_labels
     return _input_fn
 
-LSTM_SIZE = 3  # number of hidden layers in each of the LSTM cells
+# Create inference model using Keras
+# The model here is a dnn regressor
+def make_keras_estimator(output_dir):
+  from tensorflow import keras
+  model = keras.models.Sequential()
+  model.add(keras.layers.Dense(32, input_shape=(N_INPUTS,), name=TIMESERIES_INPUT_LAYER))
+  model.add(keras.layers.Activation('relu'))
+  model.add(keras.layers.Dense(1))
+  model.compile(loss = 'mean_squared_error',
+                optimizer = 'adam', 
+                metrics = ['mae', 'mape']) # mean absolute [percentage] error
+  return keras.estimator.model_to_estimator(model, model_dir=output_dir)
 
 # Create the inference model
 def simple_rnn(features, labels, mode):
@@ -79,7 +92,7 @@ def simple_rnn(features, labels, mode):
 
     # Slice to keep only the last cell of the RNN
     outputs = outputs[-1]
-    #print 'last outputs={}'.format(outputs)
+    #print('last outputs={}'.format(outputs))
 
     # Output is result of linear activation of last layer of RNN
     weight = tf.Variable(tf.random_normal([LSTM_SIZE, N_OUTPUTS]))
@@ -106,7 +119,7 @@ def simple_rnn(features, labels, mode):
     predictions_dict = {"predicted": predictions}
     
     # 4. Create export outputs
-    export_outputs = {"regression_export_outputs": tf.estimator.export.RegressionOutput(value = predictions)}
+    export_outputs = {"predict_export_outputs": tf.estimator.export.PredictOutput(outputs = predictions)}
 
     # 4. Return EstimatorSpec
     return tf.estimator.EstimatorSpec(
@@ -116,13 +129,6 @@ def simple_rnn(features, labels, mode):
         train_op = train_op,
         eval_metric_ops = eval_metric_ops,
         export_outputs = export_outputs)
-
-# Create functions to read in respective datasets
-def get_train():
-    return read_dataset(filename = 'train.csv', mode = tf.estimator.ModeKeys.TRAIN, batch_size = 512)
-
-def get_valid():
-    return read_dataset(filename = 'valid.csv', mode = tf.estimator.ModeKeys.EVAL, batch_size = 512)
 
 # Create serving input function
 def serving_input_fn():
@@ -139,13 +145,20 @@ def serving_input_fn():
     return tf.estimator.export.ServingInputReceiver(features, feature_placeholders)
 
 # Create custom estimator's train and evaluate function
-def train_and_evaluate(output_dir):
-    estimator = tf.estimator.Estimator(model_fn = simple_rnn, 
-                                       model_dir = output_dir)
-    train_spec = tf.estimator.TrainSpec(input_fn = get_train(),
+def train_and_evaluate(output_dir, use_keras):
+    if use_keras:
+       estimator = make_keras_estimator(output_dir)
+    else:
+       estimator = tf.estimator.Estimator(model_fn = simple_rnn, 
+                                          model_dir = output_dir)
+    train_spec = tf.estimator.TrainSpec(read_dataset('train.csv',
+                                            tf.estimator.ModeKeys.TRAIN,
+                                            512),
                                         max_steps = 1000)
     exporter = tf.estimator.LatestExporter('exporter', serving_input_fn)
-    eval_spec = tf.estimator.EvalSpec(input_fn = get_valid(),
+    eval_spec = tf.estimator.EvalSpec(read_dataset('valid.csv',
+                                            tf.estimator.ModeKeys.EVAL,
+                                            512),
                                       steps = None, 
                                       exporters = exporter)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)

@@ -23,9 +23,8 @@
     2. **predict-batch-cmle.sh** command-line script to submit a "Batch Predict" job to Cloud ML Engine (to be executed by **run_pipeline_with_batch_predict** function in **batch_process.py** module).
     3. **bq_stats.sql** SQL script to query the stats of the streamed data into BigQuery
 5. **Root Files**
-    1. **run_pipeline.py** executes a pipeline based on given parameters:
-        1. EXPERIMENT: <"batch" | "batch-predict" | "stream" | "stream-m-batches" >
-        2. INFERENCE_TYPE: <"local" | "cmle" | "NA">
+    1. **experiment.py** defines and initialises the parameters for the pipeline.
+    1. **run_pipeline.py** executes a pipeline based on given parameters.
     2. **simulate_stream.py** sends data points to a specified pubsub topic
     3. **setup.py**
     4. **requirements.txt**
@@ -41,4 +40,8 @@
 ### Stream (Source Pubs/Sub -> Sink: BigQuery)
 1. Calling a local TF Model with-in Dataflow Streaming Pipeline
 2. Calling CMLE for each data point in Dataflow Streaming Pipeline
-3. Micro-batching data points and send them to CMLE in Dataflow Streaming Pipeline
+### Stream + Micro-batching (Source Pubs/Sub -> Sink: BigQuery)
+1. Batching data points then send them to CMLE in Dataflow Streaming Pipeline
+2. Batching data points then send them to TF Model with-in in Dataflow Streaming Pipeline
+
+                

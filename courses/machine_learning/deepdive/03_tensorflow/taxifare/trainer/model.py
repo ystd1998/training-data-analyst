@@ -79,10 +79,8 @@ def serving_input_fn():
     feature_placeholders = {
         column.name: tf.placeholder(tf.float32, [None]) for column in INPUT_COLUMNS
     }
-    features = {
-        key: tf.expand_dims(tensor, -1)
-        for key, tensor in feature_placeholders.items()
-    }
+
+    features = feature_placeholders
     return tf.estimator.export.ServingInputReceiver(features, feature_placeholders)
 
 # Create an estimator that we are going to train and evaluate
@@ -103,6 +101,6 @@ def train_and_evaluate(args):
                                 mode = tf.estimator.ModeKeys.EVAL),
         steps = None,
         start_delay_secs = args['eval_delay_secs'],
-        throttle_secs = args['min_eval_frequency'],
+        throttle_secs = args['throttle_secs'],
         exporters = exporter)
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
