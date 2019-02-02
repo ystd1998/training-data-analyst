@@ -1,0 +1,29 @@
+query="""
+SELECT
+  departure_delay,
+  COUNT(1) AS num_flights,
+  APPROX_QUANTILES(arrival_delay, 10) AS arrival_delay_deciles
+FROM
+  `bigquery-samples.airline_ontime_data.flights`
+GROUP BY
+  departure_delay
+HAVING
+  num_flights > 100
+ORDER BY
+  departure_delay ASC
+"""
+
+import google.datalab.bigquery as bq
+df = bq.Query(query).execute().result().to_dataframe()
+df.head()
+
+mport pandas as pd
+percentiles = df['arrival_delay_deciles'].apply(pd.Series)
+percentiles = percentiles.rename(columns = lambda x : str(x*10) + "%")
+df = pd.concat([df['departure_delay'], percentiles], axis=1)
+df.head()
+
+thout_extremes = df.drop(['0%', '100%'], 1)
+without_extremes.plot(x='departure_delay', xlim=(-30,50), ylim=(-50,50));
+
+
